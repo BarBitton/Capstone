@@ -1,0 +1,391 @@
+/* ===== Reset בסיסי ===== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  background: #f3f4f6;
+  color: #111827;
+}
+
+/* ===== מסגרת "טלפון" כמו במוקטאפ ===== */
+
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #f3f4f6;
+}
+
+.app-phone {
+  width: 380px;
+  max-width: 100%;
+  min-height: 680px;
+  border-radius: 30px;
+  border: 2px solid #1f2933;
+  background: #ffffff;
+  padding: 24px 20px 32px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+}
+
+.app-header {
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.app-title {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.app-main {
+  flex: 1;
+  display: flex;
+}
+
+/* ===== מסכי האפליקציה ===== */
+
+.screen-wrapper,
+.screen {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.screen-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.back-link,
+.back-button {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #2563eb;
+  padding: 0.2rem 0.4rem;
+}
+
+.screen-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.subtitle {
+  text-align: center;
+  margin-bottom: 12px;
+  font-size: 0.9rem;
+  color: #4b5563;
+}
+
+.screen {
+  padding: 1.25rem;
+}
+
+/* ===== כרטיס כללי (Register / Login / Diagnostic / Info וכו') ===== */
+
+.card {
+  background: #ffffff;
+  border-radius: 0.9rem;
+  padding: 1.25rem 1.3rem;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.15);
+}
+
+.card-subtitle {
+  font-size: 0.9rem;
+  color: #4b5563;
+  margin: 0 0 0.75rem 0;
+}
+
+/* ===== כפתורים בסגנון המוקטאפ ===== */
+
+.screen-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.btn-primary,
+.btn-secondary,
+.btn-danger,
+.primary-btn {
+  cursor: pointer;
+  border-radius: 999px;
+  border: none;
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-primary,
+.primary-btn {
+  background: #000000;
+  color: #ffffff;
+}
+
+.btn-primary:disabled,
+.primary-btn:disabled {
+  background: #9ca3af;
+  cursor: wait;
+}
+
+.btn-secondary {
+  background: #e5e7eb;
+  color: #111827;
+}
+
+.btn-danger {
+  background: #e11d48;
+  color: #ffffff;
+  margin-top: auto;
+}
+
+/* כפתור מלא רוחב (למסך אבחון) */
+.full-width {
+  width: 100%;
+  margin-top: 0.4rem;
+}
+
+/* ===== טפסים (Register / Login / Diagnostic) ===== */
+
+.form,
+.grid-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.form-label {
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+/* שדות כלליים למסכים החדשים והישנים */
+label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+.form-input,
+.form-textarea,
+input,
+select,
+textarea {
+  width: 100%;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  padding: 8px 10px;
+  font-size: 14px;
+  margin-top: 4px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease,
+    background 0.15s ease;
+  box-sizing: border-box;
+}
+
+.form-input:focus,
+.form-textarea:focus,
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.35);
+  background: #f9fafb;
+}
+
+.form-textarea,
+textarea {
+  resize: vertical;
+  min-height: 90px;
+}
+
+/* שתי עמודות לשדות העליונים באבחון */
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+@media (max-width: 480px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ===== הודעות שגיאה ותוצאות ===== */
+
+.error-text {
+  color: #b91c1c;
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.error-box {
+  background: #fef2f2;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  color: #b91c1c;
+  font-size: 0.85rem;
+}
+
+.result-box {
+  margin-top: 12px;
+  padding: 10px;
+  border-radius: 8px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  font-size: 14px;
+}
+
+.result-box pre {
+  white-space: pre-wrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+  font-size: 0.9rem;
+  color: #1f2933;
+}
+
+/* ===== היסטוריה ===== */
+
+.history-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.8fr);
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+@media (max-width: 900px) {
+  .history-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.history-card h3,
+.history-detail-card h3 {
+  margin-top: 0;
+  margin-bottom: 0.75rem;
+}
+
+/* טבלת היסטוריה סטייל המוקטאפ */
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 8px 0 0 0;
+  font-size: 13px;
+}
+
+.history-table td {
+  border: 1px solid #d1d5db;
+  padding: 8px;
+}
+
+.history-row {
+  cursor: pointer;
+}
+
+.history-row.selected {
+  background: #f3f4f6;
+}
+
+/* פרטי האבחון */
+.detail-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+}
+
+/* מבוסס על ה-history-list / history-item הישנים (אם תשתמש בהם) */
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.history-item {
+  width: 100%;
+  text-align: left;
+  border-radius: 0.5rem;
+  border: 1px solid #e5e7eb;
+  padding: 0.5rem 0.7rem;
+  background: #ffffff;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  transition: background 0.12s ease, border-color 0.12s ease,
+    box-shadow 0.12s ease;
+}
+
+.history-item:hover {
+  background: #f3f4ff;
+  border-color: #c7d2fe;
+  box-shadow: 0 4px 10px rgba(129, 140, 248, 0.25);
+}
+
+.history-item.active {
+  background: #e0ebff;
+  border-color: #2563eb;
+}
+
+.history-main {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #111827;
+}
+
+.history-title {
+  max-width: 65%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.history-date {
+  color: #6b7280;
+  font-weight: 400;
+}
+
+.history-snippet {
+  font-size: 0.8rem;
+  color: #4b5563;
+}
+
+/* ===== טקסט מידע (FTT Info) ===== */
+
+.info-text p {
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+/* ===== אייקון רופא בתחתית ===== */
+
+.doctor-figure {
+  margin-top: auto;
+  text-align: center;
+  font-size: 32px;
+}
