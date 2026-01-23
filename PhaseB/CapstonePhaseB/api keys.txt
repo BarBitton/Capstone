@@ -1,0 +1,13 @@
+cd C:\Users\yehud\OneDrive\Documents\Visual Studio 2022\Desktop\Wify\Capstone\CapstonePhaseB_clean
+
+npm run dev
+
+
+
+cd C:\Users\yehud\OneDrive\Documents\Visual Studio 2022\Desktop\Wify\Capstone\CapstonePhaseB_clean\functions
+firebase emulators:start
+
+npm run build
+
+
+firebase deploy --only hosting,functions

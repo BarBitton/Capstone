@@ -1,0 +1,28 @@
+{
+  "acc": 0.49,
+  "params": {
+    "majorSevereAt": 3,
+    "majorModerateAt": 2,
+    "below3WithMajorAt": 1,
+    "sumSevereAt": 4,
+    "sumModerateAt": 2,
+    "below3WithSumAt": 2
+  },
+  "cm": {
+    "1": {
+      "1": 23,
+      "2": 7,
+      "3": 3
+    },
+    "2": {
+      "1": 12,
+      "2": 11,
+      "3": 6
+    },
+    "3": {
+      "1": 14,
+      "2": 9,
+      "3": 15
+    }
+  }
+}
