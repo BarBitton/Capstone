@@ -13,7 +13,22 @@ import {
 import TrendChartWeight from "./TrendChartWeight";
 import TrendChartHeight from "./TrendChartHeight";
 
+/**
+ * ChildDetailsScreen.jsx (short documentation)
+ * -------------------------------------------
+ * Shows details for one child:
+ * - Child profile (age, gender, weight, height, symptoms, notes)
+ * - Latest assessment text + CDC percentiles (if saved in the latest assessment)
+ * - Trend charts (weight/height vs age) based on all saved assessments
+ * - Button to open chat for this child
+ *
+ * Data sources (Firestore):
+ * - users/{uid}/children/{childId}                 → child profile
+ * - users/{uid}/children/{childId}/assessments     → assessment history + metrics
+ */
+
 function formatAge(ageMonths) {
+  // Converts age in months to a simple readable string (e.g., "10 Months" or "2.03 Years")
   const m = Number(ageMonths);
   if (!Number.isFinite(m) || m < 0) return "";
 
@@ -26,22 +41,31 @@ function formatAge(ageMonths) {
 }
 
 function fmtPercentile(p) {
+  // Formats percentile value for display (e.g., 12.345 → "12.3th")
   const n = Number(p);
   if (!Number.isFinite(n)) return null;
   return `${n.toFixed(1)}th`;
 }
 
 function fmtZ(z) {
+  // Formats z-score for display (standard deviation units)
   const n = Number(z);
   if (!Number.isFinite(n)) return null;
   return n.toFixed(2);
 }
 
 export default function ChildDetailsScreen({ childId, onBack, onOpenChat }) {
+  // child → profile info, latest → newest assessment, assessments → all assessments for charts
   const [child, setChild] = useState(null);
   const [latest, setLatest] = useState(null);
   const [assessments, setAssessments] = useState([]);
 
+  /**
+   * Load data when childId changes:
+   * 1) Child profile document
+   * 2) Latest assessment (desc, limit 1)
+   * 3) All assessments (asc) for trend charts
+   */
   useEffect(() => {
     const run = async () => {
       const user = auth.currentUser;
@@ -63,7 +87,7 @@ export default function ChildDetailsScreen({ childId, onBack, onOpenChat }) {
       if (!latestSnap.empty) setLatest(latestSnap.docs[0].data());
       else setLatest(null);
 
-      // All (or last N) assessments for trend charts
+      // All assessments for trend charts
       const allSnap = await getDocs(query(assRef, orderBy("createdAt", "asc")));
       setAssessments(allSnap.docs.map((d) => d.data()));
     };
@@ -71,8 +95,13 @@ export default function ChildDetailsScreen({ childId, onBack, onOpenChat }) {
     run();
   }, [childId]);
 
-  // Build chart points in the exact format your charts expect:
-  // { ageMonths, weightKg, heightCm }
+  /**
+   * Build chart points in the format needed by TrendChart components:
+   * { ageMonths, weightKg, heightCm }
+   * Notes:
+   * - Supports both old/new field names (ageInMonths vs age).
+   * - Deduplicates by ageMonths (keeps the last item for each age).
+   */
   const points = useMemo(() => {
     const rows = (assessments || [])
       .map((a) => {
@@ -97,6 +126,7 @@ export default function ChildDetailsScreen({ childId, onBack, onOpenChat }) {
     return Array.from(byAge.values()).sort((a, b) => a.ageMonths - b.ageMonths);
   }, [assessments]);
 
+  // Simple loading state until we have the child profile
   if (!child) {
     return (
       <div className="screen">
@@ -108,7 +138,7 @@ export default function ChildDetailsScreen({ childId, onBack, onOpenChat }) {
     );
   }
 
-  // Metrics from latest assessment (only if it exists)
+  // Metrics are saved inside the latest assessment (if it exists)
   const metrics = latest?.metrics || null;
   const likelyFtt =
     typeof latest?.likelyFtt === "boolean" ? latest.likelyFtt : null;
@@ -133,6 +163,7 @@ export default function ChildDetailsScreen({ childId, onBack, onOpenChat }) {
         <h2 className="screen-title">{child.childName}</h2>
       </div>
 
+      {/* Child profile */}
       <div className="result-box">
         <h3>Child data</h3>
 
@@ -158,6 +189,7 @@ export default function ChildDetailsScreen({ childId, onBack, onOpenChat }) {
         </div>
       </div>
 
+      {/* Latest assessment + percentiles (if available) */}
       {latest && (
         <div className="result-box">
           <h3>Latest assessment</h3>
@@ -207,16 +239,22 @@ export default function ChildDetailsScreen({ childId, onBack, onOpenChat }) {
         </div>
       )}
 
+      {/* Trend charts */}
       <div className="result-box">
         <h3>Weight vs Age</h3>
-        <TrendChartWeight points={points.filter((p) => Number.isFinite(p.weightKg))} />
+        <TrendChartWeight
+          points={points.filter((p) => Number.isFinite(p.weightKg))}
+        />
       </div>
 
       <div className="result-box">
         <h3>Height vs Age</h3>
-        <TrendChartHeight points={points.filter((p) => Number.isFinite(p.heightCm))} />
+        <TrendChartHeight
+          points={points.filter((p) => Number.isFinite(p.heightCm))}
+        />
       </div>
 
+      {/* Navigate to chat for this child */}
       <button className="btn-primary" onClick={() => onOpenChat(childId)}>
         Open Chat
       </button>

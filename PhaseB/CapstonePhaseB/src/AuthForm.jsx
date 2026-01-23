@@ -5,25 +5,76 @@ import {
   signInWithEmailAndPassword,
 } from "firebase/auth";
 
+/**
+ * AuthForm.jsx
+ * ------------
+ * This component handles user authentication (login and registration).
+ *
+ * It provides a single form that can switch between:
+ * - Login mode
+ * - Register (create account) mode
+ *
+ * Authentication is performed using Firebase Authentication
+ * with email and password.
+ *
+ * This component does NOT control navigation directly.
+ * Instead, it notifies the parent component when authentication succeeds.
+ */
+
 export default function AuthForm({ onAuthSuccess }) {
+  /**
+   * mode:
+   * Determines whether the form is in "login" or "register" mode.
+   */
   const [mode, setMode] = useState("login"); // 'login' or 'register'
+
+  /**
+   * email:
+   * Stores the user's email input.
+   */
   const [email, setEmail] = useState("");
+
+  /**
+   * password:
+   * Stores the user's password input.
+   */
   const [password, setPassword] = useState("");
+
+  /**
+   * error:
+   * Stores authentication error messages returned from Firebase.
+   */
   const [error, setError] = useState("");
 
+  /**
+   * handleSubmit
+   * ------------
+   * Called when the authentication form is submitted.
+   *
+   * Flow:
+   * 1. Prevent default form refresh.
+   * 2. Clear previous error messages.
+   * 3. Depending on mode:
+   *    - register → create a new Firebase user
+   *    - login    → sign in existing user
+   * 4. If successful, notify the parent component.
+   */
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
     try {
       let userCredential;
+
       if (mode === "register") {
+        // Create a new user account
         userCredential = await createUserWithEmailAndPassword(
           auth,
           email,
           password
         );
       } else {
+        // Login with existing account
         userCredential = await signInWithEmailAndPassword(
           auth,
           email,
@@ -31,15 +82,24 @@ export default function AuthForm({ onAuthSuccess }) {
         );
       }
 
+      // Inform parent component that authentication succeeded
       if (onAuthSuccess) {
         onAuthSuccess(userCredential.user);
       }
     } catch (err) {
+      // Display Firebase authentication errors to the user
       console.error(err);
       setError(err.message);
     }
   };
 
+  /**
+   * UI rendering
+   * ------------
+   * - Email + password form
+   * - Error message (if exists)
+   * - Button to switch between login and register modes
+   */
   return (
     <div className="auth-container">
       <h1 className="app-title">Growth Assistant</h1>
@@ -68,6 +128,7 @@ export default function AuthForm({ onAuthSuccess }) {
           />
         </label>
 
+        {/* Display authentication error if exists */}
         {error && <div className="error-box">{error}</div>}
 
         <button type="submit" className="primary-btn">
@@ -75,6 +136,7 @@ export default function AuthForm({ onAuthSuccess }) {
         </button>
       </form>
 
+      {/* Toggle between login and register modes */}
       <div className="switch-mode">
         {mode === "register" ? (
           <p>

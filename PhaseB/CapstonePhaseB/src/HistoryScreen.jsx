@@ -2,7 +2,22 @@ import React, { useEffect, useState } from "react";
 import { auth, db } from "./firebase";
 import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
 
+/**
+ * HistoryScreen.jsx (short documentation)
+ * --------------------------------------
+ * Displays the list of all saved children for the logged-in user.
+ *
+ * Data source (Firestore):
+ * - users/{uid}/children
+ *
+ * Features:
+ * - Real-time updates using onSnapshot()
+ * - Sorted by updatedAt (most recently updated child first)
+ * - Clicking a child calls onOpenChild(childId) to open ChildDetailsScreen
+ */
+
 function formatAge(ageMonths) {
+  // Converts age in months into a simple readable string
   const m = Number(ageMonths);
   if (!Number.isFinite(m) || m < 0) return "";
 
@@ -15,9 +30,17 @@ function formatAge(ageMonths) {
 }
 
 export default function HistoryScreen({ onBack, onOpenChild }) {
+  // children: list of child documents (id + fields)
   const [children, setChildren] = useState([]);
-  const [loading, setLoading] = useState(true); // ✅ NEW
 
+  // loading: used to show a loading message until the first snapshot arrives
+  const [loading, setLoading] = useState(true);
+
+  /**
+   * Load children list once on mount:
+   * - If no user is logged in, stop loading
+   * - Otherwise, subscribe to Firestore updates
+   */
   useEffect(() => {
     const user = auth.currentUser;
     if (!user) {
@@ -32,7 +55,7 @@ export default function HistoryScreen({ onBack, onOpenChild }) {
       q,
       (snap) => {
         setChildren(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-        setLoading(false); // ✅ snapshot ראשון הגיע
+        setLoading(false); // first snapshot arrived
       },
       (err) => {
         console.error("History snapshot error:", err);
@@ -40,6 +63,7 @@ export default function HistoryScreen({ onBack, onOpenChild }) {
       }
     );
 
+    // Cleanup subscription on unmount
     return () => unsub();
   }, []);
 
@@ -47,6 +71,7 @@ export default function HistoryScreen({ onBack, onOpenChild }) {
     <div className="screen">
       <h2 className="screen-title">Diagnostic History</h2>
 
+      {/* Show loading / empty / list states */}
       {loading ? (
         <p>Loading history...</p>
       ) : children.length === 0 ? (
@@ -72,6 +97,7 @@ export default function HistoryScreen({ onBack, onOpenChild }) {
         </div>
       )}
 
+      {/* Back navigation */}
       <div style={{ marginTop: 12 }}>
         <button className="btn-secondary" onClick={onBack}>
           Back

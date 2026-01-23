@@ -16,6 +16,38 @@ import TrendChartWeight from "./TrendChartWeight";
 import TrendChartHeight from "./TrendChartHeight";
 
 /**
+ * AssessmentScreen.jsx
+ * -------------------
+ * What this screen does:
+ * 1) Lets the user select an existing child OR create a new child.
+ * 2) Runs an "assessment" (AI text + growth analysis).
+ *
+ * Two flows:
+ * - NEW child:
+ *   - We build a prompt on the client and call diagnoseChild(prompt).
+ *   - We save the assessment from the client.
+ *
+ * - EXISTING child:
+ *   - We call assessExistingChild(...) which hits the server route /assessExisting.
+ *   - The server computes CDC percentiles + Likely FTT (trend-aware) and saves an assessment.
+ *   - We display:
+ *       • AI assessment text
+ *       • CDC percentiles (weight-for-age, length-for-age) + z-scores
+ *       • Likely FTT + reasons
+ *
+ * Why your percentiles sometimes didn't appear:
+ * - In some project setups, assessExistingChild() returns ONLY a string (result),
+ *   or the deploy/emulator may still be running an older version of api.js/functions.
+ *
+ * Fix in this version:
+ * - We support BOTH return shapes:
+ *     a) resp is an object: { result, metrics, likelyFtt, likelyFttReasons }
+ *     b) resp is a string: "This is NOT FTT."
+ * - If percentiles are missing from the response, we fallback to Firestore:
+ *   we fetch the latest saved assessment document and read metrics from it.
+ */
+
+/**
  * Prompt used for NEW child OR fallback (no percentiles).
  * For existing child, we call /assessExisting so the server computes percentiles.
  */
@@ -67,7 +99,6 @@ IMPORTANT OUTPUT RULE:
   "according to standard pediatric clinical practice".
 
 If evidence excerpts are provided below, use them ONLY to improve reasoning, but NEVER cite or reference them explicitly in the text.
-
 
 Style guidelines:
 - Write in clear, natural English.
@@ -128,7 +159,22 @@ Provide your assessment in English, following the response structure above.
 `.trim();
 }
 
+/** Helper: formats percentile as "12.3th". */
+function fmtPercentile(p) {
+  const n = Number(p);
+  if (!Number.isFinite(n)) return null;
+  return `${n.toFixed(1)}th`;
+}
+
+/** Helper: formats z-score (standard deviation units). */
+function fmtZ(z) {
+  const n = Number(z);
+  if (!Number.isFinite(n)) return null;
+  return n.toFixed(2);
+}
+
 export default function AssessmentScreen({ onBack, onGoChat }) {
+  // 1) Child selection & form data
   const [children, setChildren] = useState([]);
   const [selectedChildId, setSelectedChildId] = useState("");
 
@@ -144,12 +190,20 @@ export default function AssessmentScreen({ onBack, onGoChat }) {
     notes: "",
   });
 
+  // 2) UI state
   const [loading, setLoading] = useState(false);
   const [assessment, setAssessment] = useState("");
   const [error, setError] = useState(null);
+
+  // childId is used when user presses "Continue Chat"
   const [childId, setChildId] = useState(null);
 
-  // ---- NEW: trend points for charts on the Assessment page ----
+  // 3) Percentiles + Likely FTT (for existing child)
+  const [metrics, setMetrics] = useState(null);
+  const [likelyFtt, setLikelyFtt] = useState(null);
+  const [likelyFttReasons, setLikelyFttReasons] = useState([]);
+
+  // 4) Trend charts state
   const [trendAssessments, setTrendAssessments] = useState([]);
 
   async function refreshTrendAssessments(childIdToLoad) {
@@ -170,8 +224,25 @@ export default function AssessmentScreen({ onBack, onGoChat }) {
     setTrendAssessments(snap.docs.map((d) => d.data()));
   }
 
-  // Build points in the exact format required by your chart files:
-  // { ageMonths, weightKg, heightCm }
+  /**
+   * Fetch the most recent assessment from Firestore and pull metrics from it.
+   * This is a fallback in case the server response does not include metrics.
+   */
+  async function fetchLatestAssessmentMetrics(uid, childIdToLoad) {
+    const assRef = collection(db, `users/${uid}/children/${childIdToLoad}/assessments`);
+    const assSnap = await getDocs(query(assRef, orderBy("createdAt", "desc"), limit(1)));
+    const latest = assSnap.docs[0]?.data?.() ? assSnap.docs[0].data() : null;
+
+    if (latest) {
+      setMetrics(latest.metrics || null);
+      setLikelyFtt(typeof latest.likelyFtt === "boolean" ? latest.likelyFtt : null);
+      setLikelyFttReasons(
+        Array.isArray(latest.likelyFttReasons) ? latest.likelyFttReasons : []
+      );
+    }
+  }
+
+  // Build chart points for TrendChart* components: { ageMonths, weightKg, heightCm }
   const trendPoints = useMemo(() => {
     const rows = (trendAssessments || [])
       .map((a) => {
@@ -195,6 +266,7 @@ export default function AssessmentScreen({ onBack, onGoChat }) {
     return Array.from(byAge.values()).sort((a, b) => a.ageMonths - b.ageMonths);
   }, [trendAssessments]);
 
+  // Subscribe to children list
   useEffect(() => {
     const user = auth.currentUser;
     if (!user) return;
@@ -209,11 +281,17 @@ export default function AssessmentScreen({ onBack, onGoChat }) {
     return () => unsub();
   }, []);
 
-  // When selecting an existing child -> prefill form AND load trend charts
+  // Selecting a child: prefill form + load trend charts + reset output
   const handleSelectChild = async (id) => {
     setSelectedChildId(id);
+
     setAssessment("");
     setError(null);
+    setChildId(null);
+
+    setMetrics(null);
+    setLikelyFtt(null);
+    setLikelyFttReasons([]);
 
     if (!id) {
       setForm({
@@ -253,10 +331,10 @@ export default function AssessmentScreen({ onBack, onGoChat }) {
       notes: c.notes || "",
     }));
 
-    // Load charts immediately for existing child
     await refreshTrendAssessments(id);
   };
 
+  // Update form fields + compute ageInMonths
   const handleChange = (e) => {
     const { name, value } = e.target;
 
@@ -276,11 +354,17 @@ export default function AssessmentScreen({ onBack, onGoChat }) {
     });
   };
 
+  // Submit assessment (new vs existing)
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     setError(null);
     setAssessment("");
     setLoading(true);
+
+    setMetrics(null);
+    setLikelyFtt(null);
+    setLikelyFttReasons([]);
 
     try {
       const user = auth.currentUser;
@@ -326,7 +410,7 @@ export default function AssessmentScreen({ onBack, onGoChat }) {
       let aiText = "";
 
       if (isExisting) {
-        // EXISTING child: server computes CDC percentiles + Likely FTT + saves assessment
+        // EXISTING child: server should compute CDC percentiles + Likely FTT
         const resp = await assessExistingChild({
           uid: user.uid,
           childId: activeChildId,
@@ -338,10 +422,24 @@ export default function AssessmentScreen({ onBack, onGoChat }) {
           },
         });
 
-        aiText = resp.result;
+        // --- Support BOTH return types (object or string) ---
+        const isObj = resp && typeof resp === "object" && !Array.isArray(resp);
+        aiText = isObj ? resp.result : String(resp || "");
         setAssessment(aiText);
 
-        // Add chat messages (optional)
+        // --- Prefer metrics from response; otherwise fallback to Firestore ---
+        if (isObj && resp.metrics) {
+          setMetrics(resp.metrics || null);
+          setLikelyFtt(typeof resp.likelyFtt === "boolean" ? resp.likelyFtt : null);
+          setLikelyFttReasons(
+            Array.isArray(resp.likelyFttReasons) ? resp.likelyFttReasons : []
+          );
+        } else {
+          // Fallback: fetch the latest saved assessment (server always saves it)
+          await fetchLatestAssessmentMetrics(user.uid, activeChildId);
+        }
+
+        // Optional: add chat messages
         await addChatMessage(
           user.uid,
           activeChildId,
@@ -353,7 +451,7 @@ export default function AssessmentScreen({ onBack, onGoChat }) {
         // Refresh charts so the new assessment point appears immediately
         await refreshTrendAssessments(activeChildId);
       } else {
-        // NEW child: keep your existing prompt route
+        // NEW child: client prompt route
         const prompt = buildPromptWithTrend({
           form,
           childFromDb,
@@ -363,21 +461,13 @@ export default function AssessmentScreen({ onBack, onGoChat }) {
         aiText = await diagnoseChild(prompt);
         setAssessment(aiText);
 
-        // Save assessment for NEW child (client-side)
         await addAssessment(user.uid, activeChildId, {
           form: { ...form, age: form.ageInMonths },
           assessmentResult: aiText,
         });
 
-        await addChatMessage(
-          user.uid,
-          activeChildId,
-          "user",
-          "Initial assessment request."
-        );
+        await addChatMessage(user.uid, activeChildId, "user", "Initial assessment request.");
         await addChatMessage(user.uid, activeChildId, "assistant", aiText);
-
-        // New child: charts not shown by default (no existing child selection)
       }
     } catch (err) {
       console.error(err);
@@ -413,11 +503,11 @@ export default function AssessmentScreen({ onBack, onGoChat }) {
           ))}
         </select>
         <div style={{ marginTop: 8, opacity: 0.8, fontSize: 13 }}>
-          Choose an existing child to run a new assessment based on percentiles + trend, or select “New child”.
+          Choose an existing child to run a new assessment based on percentiles + trend,
+          or select “New child”.
         </div>
       </div>
 
-      {/* ---- NEW: show charts immediately for existing child ---- */}
       {selectedChildId && (
         <div className="result-box">
           <h3>Growth trend (existing child)</h3>
@@ -549,6 +639,61 @@ export default function AssessmentScreen({ onBack, onGoChat }) {
         <div className="result-box">
           <h3>Assessment Result</h3>
           <pre>{assessment}</pre>
+
+          {/* Percentiles (CDC) section for existing child assessments */}
+          {metrics && (
+            <div style={{ marginTop: 14 }}>
+              <h4 style={{ margin: "8px 0" }}>Growth percentiles (CDC)</h4>
+
+              <div style={{ lineHeight: 1.8 }}>
+                <div>
+                  <b>Weight-for-age:</b>{" "}
+                  {fmtPercentile(metrics?.weightForAge?.percentile) || "N/A"}
+                  {fmtZ(metrics?.weightForAge?.z) ? (
+                    <span style={{ opacity: 0.8 }}>
+                      {" "}
+                      (z={fmtZ(metrics?.weightForAge?.z)})
+                    </span>
+                  ) : null}
+                </div>
+
+                <div>
+                  <b>Length-for-age:</b>{" "}
+                  {fmtPercentile(metrics?.lengthForAge?.percentile) || "N/A"}
+                  {fmtZ(metrics?.lengthForAge?.z) ? (
+                    <span style={{ opacity: 0.8 }}>
+                      {" "}
+                      (z={fmtZ(metrics?.lengthForAge?.z)})
+                    </span>
+                  ) : null}
+                </div>
+
+                {likelyFtt !== null && (
+                  <div style={{ marginTop: 8 }}>
+                    <b>Likely FTT (growth-based):</b>{" "}
+                    <span style={{ fontWeight: 700 }}>
+                      {likelyFtt ? "YES" : "NO"}
+                    </span>
+                  </div>
+                )}
+
+                {likelyFttReasons?.length > 0 && (
+                  <div style={{ marginTop: 6 }}>
+                    <b>Reasons:</b>
+                    <ul style={{ margin: "6px 0 0 18px" }}>
+                      {likelyFttReasons.map((r, i) => (
+                        <li key={i}>{r}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ marginTop: 8, opacity: 0.75, fontSize: 13 }}>
+                Percentiles are computed on the server using CDC LMS tables.
+              </div>
+            </div>
+          )}
 
           <button
             className="btn-primary"

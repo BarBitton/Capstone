@@ -1,0 +1,23 @@
+{
+  "scoredRows": 96,
+  "accuracy": 0.9270833333333334,
+  "confusionMatrix": {
+    "1": {
+      "1": 31,
+      "2": 2,
+      "3": 0
+    },
+    "2": {
+      "1": 1,
+      "2": 22,
+      "3": 2
+    },
+    "3": {
+      "1": 2,
+      "2": 0,
+      "3": 36
+    }
+  },
+  "examplesPerClass": 6,
+  "note": "Few-shot in-context learning using physician-labeled examples from the same dataset (excluding the target row)."
+}

@@ -3,8 +3,7 @@ import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 
-// ⚠️ חשוב: את הערכים האלה לקחת מה-Project שלך ב-Firebase console
-// אם תשנה פרויקט בעתיד – צריך לעדכן גם כאן.
+
 const firebaseConfig = {
   apiKey: "AIzaSyA3JrusIBtkJmmKtNeaem42YIp2NPwx1kw",
   authDomain: "capstonephaseb-ftt.firebaseapp.com",
